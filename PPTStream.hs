@@ -1,7 +1,12 @@
 module PPTStream where
 
-parsePPTStream file = undefined
-streamInfo = undefined
-streamHeader = undefined
-streamDirectory = undefined
+import OLEStorage
+
+parsePPTStream = parseHeader
+
+streamHeaderInfo :: Header -> String
+streamHeaderInfo = show
+
+streamDirectoryInfo :: Header -> String
+streamDirectoryInfo _ = ""
 
