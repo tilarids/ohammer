@@ -4,6 +4,7 @@ import qualified Data.ByteString.Lazy as B
 import Data.Binary
 import Data.Binary.Get as BinaryGet
 import Data.Binary.Put as BinaryPut
+import Control.Monad.Loops
 
 
 data ByteOrder = LittleEndian | BigEndian | UnknownEndian
@@ -17,7 +18,7 @@ data StreamLocation = SATLocation | SSATLocation
 
 data MSAT =
   MSAT { sectorSize               :: Int,
-         secIDs                   :: [Int]
+         secIDs                   :: [Word32]
        }
   deriving (Show)
 
@@ -62,7 +63,9 @@ instance Binary Header where
            numSecSSAT <- BinaryGet.getWord32host
            secIDFirstMSAT <- BinaryGet.getWord32host
            numSecMSAT <- BinaryGet.getWord32host
-           let masterSAT = MSAT {sectorSize=0, secIDs=[]} -- dummy masterSAT
+           secIDs <- (unfoldM (do x <- BinaryGet.getWord32host
+                                  return $ if (x == -1) then Nothing else Just x))
+           let masterSAT = MSAT {sectorSize=2^secSize, secIDs=secIDs}
            return Header {
                            docId=docId,
                            uId=uId,
