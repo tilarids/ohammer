@@ -7,6 +7,8 @@ import Data.Binary.Put as BinaryPut
 import Control.Monad.Loops
 
 
+
+-- data types ----------------------------------------------
 data ByteOrder = LittleEndian | BigEndian | UnknownEndian
   deriving (Show)
 
@@ -33,7 +35,7 @@ data Header =
            secSize                :: Word16, -- sector size (usually 512 bytes)
            secSizeShort           :: Word16, -- short sector size (usually 64 bytes)
            numSecSAT              :: Word32, -- total number of sectors in SAT (equals the number of sector IDs
-                                          -- stored in the MSAT).
+                                             -- stored in the MSAT).
            secIDFirstDirStrm      :: Word32,
            minStreamSize          :: Word32,
            secIDFirstSSAT         :: Word32,
@@ -50,9 +52,34 @@ data OLEDocument =
               }
   deriving (Show)
 
-parseByteOrder :: Word16 -> ByteOrder
-parseByteOrder x = undefined
+data EntryType = EmptyEntry | UserStorageEntry | UserStreamEntry | LockBytesEntry | ProperyEntry | RootStorageEntry
+  deriving (Show)
 
+data EntryNodeColor = RedNode | BlackNode | UnknownNode
+  deriving (Show)
+
+data Entry = 
+  Entry { name                    :: String, 
+          charBufferSize          :: Int,
+          entryType               :: EntryType,
+          nodeColor               :: EntryNodeColor,
+          uniqueID                :: Int,
+          userFlags               :: Int,
+          timeCreated             :: Int,
+          timeModified            :: Int,
+          streamSectorID          :: Int,
+          streamSize              :: Int
+        }
+  deriving (Show)
+
+data Directory =
+  Directory { document            :: OLEDocument, -- link to document
+              entries             :: [Entry]
+            }
+  deriving (Show)
+
+-- end of data types -----------------------------------------------
+-- instances -------------------------------------------------------
 instance Binary Header where
   put = undefined -- no put - we are not saving yet
   get = do docId <- BinaryGet.getLazyByteString 8
@@ -97,9 +124,18 @@ instance Binary OLEDocument where
            return OLEDocument { header=header,
                                 bytes=bytes
                               }
+-- end of instances -----------------------------------------------------------
+-- functions ------------------------------------------------------------------
+
+
+getDirectory :: OLEDocument -> Directory
+getDirectory = undefined
 
 parseHeader :: B.ByteString -> Header
 parseHeader = decode 
 
 parseDocument :: B.ByteString -> OLEDocument
 parseDocument = decode
+
+parseByteOrder :: Word16 -> ByteOrder
+parseByteOrder x = undefined
