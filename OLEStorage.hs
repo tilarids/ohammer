@@ -16,12 +16,14 @@ data BlockType = MSATType | SATType | SSATType | DirectoryType
 data StreamLocation = SATLocation | SSATLocation
   deriving (Show)
 
+-- master sector allocation table
 data MSAT =
   MSAT { sectorSize               :: Int,
-         secIDs                   :: [Word32]
+         masterSecIDs                   :: [Word32]
        }
   deriving (Show)
 
+-- in fact, it is not only the header. Now it is all the document itself
 data Header =
   Header { docId                  :: B.ByteString, -- document id
            uId                    :: B.ByteString, -- unique id
@@ -38,8 +40,14 @@ data Header =
            numSecSSAT             :: Word32,
            secIDFirstMSAT         :: Word32,
            numSecMSAT             :: Word32,
-           masterSAT              :: MSAT -- master sector allocation table
+           secIDs                 :: [Word32]
          }
+  deriving (Show)
+
+data OLEDocument =
+  OLEDocument { header            :: Header,
+                bytes             :: B.ByteString
+              }
   deriving (Show)
 
 parseByteOrder :: Word16 -> ByteOrder
@@ -65,9 +73,7 @@ instance Binary Header where
            numSecMSAT <- BinaryGet.getWord32host
            secIDs <- (unfoldM (do x <- BinaryGet.getWord32host
                                   return $ if (x == -1) then Nothing else Just x))
-           let masterSAT = MSAT {sectorSize=2^secSize, secIDs=secIDs}
-           return Header {
-                           docId=docId,
+           return Header { docId=docId,
                            uId=uId,
                            revision=revision,
                            version=version,
@@ -81,8 +87,19 @@ instance Binary Header where
                            numSecSSAT=numSecSSAT,
                            secIDFirstMSAT=secIDFirstMSAT,
                            numSecMSAT=numSecMSAT,
-                           masterSAT=masterSAT
+                           secIDs=secIDs
                          }
 
+instance Binary OLEDocument where
+  put = undefined
+  get = do header <- get
+           bytes <- BinaryGet.getRemainingLazyByteString
+           return OLEDocument { header=header,
+                                bytes=bytes
+                              }
+
 parseHeader :: B.ByteString -> Header
-parseHeader file = decode file
+parseHeader = decode 
+
+parseDocument :: B.ByteString -> OLEDocument
+parseDocument = decode

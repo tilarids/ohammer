@@ -2,11 +2,11 @@ module PPTStream where
 
 import OLEStorage
 
-parsePPTStream = parseHeader
+parsePPTStream = parseDocument
 
-streamHeaderInfo :: Header -> String
-streamHeaderInfo = show
+streamHeaderInfo :: OLEDocument -> String
+streamHeaderInfo (OLEDocument header _) = show header
 
-streamDirectoryInfo :: Header -> String
+streamDirectoryInfo :: OLEDocument -> String
 streamDirectoryInfo _ = ""
 
