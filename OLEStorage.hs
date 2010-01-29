@@ -2,6 +2,7 @@ module OLEStorage where
 
 import qualified Data.ByteString.Lazy as B
 import Data.Binary
+import Data.Array.IArray
 import Data.Binary.Get as BinaryGet
 import Data.Binary.Put as BinaryPut
 import Control.Monad.Loops
@@ -18,12 +19,12 @@ data BlockType = MSATType | SATType | SSATType | DirectoryType
 data StreamLocation = SATLocation | SSATLocation
   deriving (Show)
 
+type SectorID = Word32
+
 -- master sector allocation table
-data MSAT =
-  MSAT { sectorSize               :: Int,
-         masterSecIDs                   :: [Word32]
-       }
-  deriving (Show)
+type MSAT =  [SectorID]
+
+type SAT = Array Int Int -- it's an allocation array
 
 -- in fact, it is not only the header. Now it is all the document itself
 data Header =
@@ -130,6 +131,16 @@ instance Binary OLEDocument where
 
 getDirectory :: OLEDocument -> Directory
 getDirectory = undefined
+
+
+-- getMSAT now disregards MSAT's with num of secIDs > 109
+getMSAT :: OLEDocument -> MSAT
+getMSAT = secIDs . header -- just use secIDs from Header
+
+-- construct SAT using MSAT and sectors from OLEDocument
+getSAT :: MSAT -> OLEDocument -> SAT
+getSAT = undefined
+
 
 parseHeader :: B.ByteString -> Header
 parseHeader = decode 
