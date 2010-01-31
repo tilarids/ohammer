@@ -24,7 +24,7 @@ type SectorID = Word32
 -- master sector allocation table
 type MSAT =  [SectorID]
 
-type SAT = Array Int Int -- it's an allocation array
+type SAT = Array Int SectorID -- it's an allocation array
 
 -- in fact, it is not only the header. Now it is all the document itself
 data Header =
@@ -59,8 +59,8 @@ data EntryType = EmptyEntry | UserStorageEntry | UserStreamEntry | LockBytesEntr
 data EntryNodeColor = RedNode | BlackNode | UnknownNode
   deriving (Show)
 
-data Entry = 
-  Entry { name                    :: String, 
+data Entry =
+  Entry { name                    :: String,
           charBufferSize          :: Int,
           entryType               :: EntryType,
           nodeColor               :: EntryNodeColor,
@@ -138,12 +138,26 @@ getMSAT :: OLEDocument -> MSAT
 getMSAT = secIDs . header -- just use secIDs from Header
 
 -- construct SAT using MSAT and sectors from OLEDocument
+-- (get the data from all sectors that are defined in MSAT)
 getSAT :: MSAT -> OLEDocument -> SAT
-getSAT = undefined
+getSAT masterSAT doc = listArray (1, (length sat)) sat
+    where sat = concat listOfIDs
+          listOfIDs = map parseID masterSAT
+          parseID theID = BinaryGet.runGet parseSec (B.drop (fromIntegral (secSize'* theID)) (bytes doc))
+          parseSec = sequence (replicate idCount BinaryGet.getWord32host)
+--          secSize' :: Word32
+          secSize' = 2 ^ (secSize (header doc)) -- it is Word32 as needed by parseID
+--          idCount :: Int
+          idCount = (fromIntegral secSize') `div` 4 -- it is Int as needed by parseSec
+                                                    -- that's why fromIntegral is used
 
+--parseID doc theID = BinaryGet.runGet (parseSecM doc) (B.drop (fromIntegral ((secSize' doc)* theID)) (bytes doc))
+--parseSecM doc = sequence (replicate (idCount doc) BinaryGet.getWord32host)
+--secSize' doc = 2 ^ (secSize (header doc))
+--idCount doc = (secSize' doc) `div` 4
 
 parseHeader :: B.ByteString -> Header
-parseHeader = decode 
+parseHeader = decode
 
 parseDocument :: B.ByteString -> OLEDocument
 parseDocument = decode
