@@ -61,15 +61,18 @@ data EntryNodeColor = RedNode | BlackNode | UnknownNode
 
 data Entry =
   Entry { name                    :: String,
-          charBufferSize          :: Int,
+          charBufferSize          :: Word16,
           entryType               :: EntryType,
           nodeColor               :: EntryNodeColor,
-          uniqueID                :: Int,
-          userFlags               :: Int,
-          timeCreated             :: Int,
-          timeModified            :: Int,
-          streamSectorID          :: Int,
-          streamSize              :: Int
+          dirIDLeft               :: Word32,
+          dirIDRight              :: Word32,
+          dirIDRoot               :: Word32,
+          uniqueID                :: B.ByteString,
+          userFlags               :: Word32,
+          timeCreated             :: Word64,
+          timeModified            :: Word64,
+          streamSectorID          :: SectorID,
+          streamSize              :: Word32
         }
   deriving (Show)
 
@@ -81,6 +84,8 @@ data Directory =
 
 -- end of data types -----------------------------------------------
 -- instances -------------------------------------------------------
+
+-- we should use little endian by default, I think
 instance Binary Header where
   put = undefined -- no put - we are not saving yet
   get = do docId <- BinaryGet.getLazyByteString 8
@@ -99,6 +104,8 @@ instance Binary Header where
            numSecSSAT <- BinaryGet.getWord32host
            secIDFirstMSAT <- BinaryGet.getWord32host
            numSecMSAT <- BinaryGet.getWord32host
+           -- it can lead to a bug
+           -- TODO: fix
            secIDs <- (unfoldM (do x <- BinaryGet.getWord32host
                                   return $ if (x == -1) then Nothing else Just x))
            return Header { docId=docId,
@@ -128,20 +135,48 @@ instance Binary OLEDocument where
 instance Binary Entry where
   put = undefined
   get = do name <- BinaryGet.getLazyByteString 64
+           charBufferSize <- BinaryGet.getWord16host
+           entryType <- BinaryGet.getWordhost
+           nodeColor <- BinaryGet.getWordhost
+           dirIDLeft <- BinaryGet.getWord32host
+           dirIDRight <- BinaryGet.getWord32host
+           dirIDRoot <- BinaryGet.getWord32host
+           uniqueID <- BinaryGet.getLazyByteString 16
+           userFlags <- BinaryGet.getWord32host
+           timeCreated <- BinaryGet.getWord64host
+           timeModified <- BinaryGet.getWord64host
+           streamSectorID <- BinaryGet.getWord32host
+           streamSize <- BinaryGet.getWord32host
            return Entry { name=utf16BytesToString name,
-                          charBufferSize=0,
-                          entryType=EmptyEntry,
-                          nodeColor=UnknownNode,
-                          uniqueID=0,
-                          userFlags=0,
-                          timeCreated=0,
-                          timeModified=0,
-                          streamSectorID=0,
-                          streamSize=0
+                          charBufferSize=charBufferSize,
+                          entryType=parseEntryType entryType,
+                          nodeColor=parseNodeColor nodeColor,
+                          dirIDLeft=dirIDLeft,
+                          dirIDRight=dirIDRight,
+                          dirIDRoot=dirIDRoot,
+                          uniqueID=uniqueID,
+                          userFlags=userFlags,
+                          timeCreated=timeCreated,
+                          timeModified=timeModified,
+                          streamSectorID=streamSectorID,
+                          streamSize=streamSize
                         }
 
 -- end of instances -----------------------------------------------------------
 -- functions ------------------------------------------------------------------
+
+parseEntryType :: Word -> EntryType
+parseEntryType 0 = EmptyEntry
+parseEntryType 1 = UserStorageEntry
+parseEntryType 2 = UserStreamEntry
+parseEntryType 3 = LockBytesEntry
+parseEntryType 4 = ProperyEntry
+parseEntryType 5 = RootStorageEntry
+
+parseNodeColor :: Word -> EntryNodeColor
+parseNodeColor 0 = RedNode
+parseNodeColor 1 = BlackNode
+
 utf16BytesToString :: B.ByteString -> String
 utf16BytesToString byteString = map unsafeChr (fromUTF16 (map fromIntegral (B.unpack byteString)))
     where fromUTF16 :: [Int] -> [Int]
@@ -150,7 +185,6 @@ utf16BytesToString byteString = map unsafeChr (fromUTF16 (map fromIntegral (B.un
               ((c1 - 0xd800)*0x400 + (c2 - 0xdc00) + 0x10000) : fromUTF16 wcs
           fromUTF16 (c:wcs) = c : fromUTF16 wcs
           fromUTF16 [] = []
-
 
 -- construct chain starting with startSector
 getChain :: SAT -> SectorID -> [SectorID]
@@ -180,7 +214,6 @@ getDirectory doc = Directory doc entries
           chainedBytes = getChainedBytes chain doc
           entries = parseEntries chainedBytes
 
-
 -- getMSAT now disregards MSAT's with num of secIDs > 109
 getMSAT :: OLEDocument -> MSAT
 getMSAT = secIDs . header -- just use secIDs from Header
@@ -198,11 +231,6 @@ getSAT masterSAT doc = listArray (1, (fromIntegral (length sat))) sat
           idCount :: Int
           idCount = (fromIntegral secSize') `div` 4 -- it is Int as needed by parseSec
                                                     -- that's why fromIntegral is used
-
---parseID doc theID = BinaryGet.runGet (parseSecM doc) (B.drop (fromIntegral ((secSize' doc)* theID)) (bytes doc))
---parseSecM doc = sequence (replicate (idCount doc) BinaryGet.getWord32host)
---secSize' doc = 2 ^ (secSize (header doc))
---idCount doc = (secSize' doc) `div` 4
 
 parseHeader :: B.ByteString -> Header
 parseHeader = decode
