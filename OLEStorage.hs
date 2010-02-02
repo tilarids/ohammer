@@ -1,12 +1,12 @@
 module OLEStorage where
 
+import GHC.Base
 import qualified Data.ByteString.Lazy as B
 import Data.Binary
 import Data.Array.IArray
 import Data.Binary.Get as BinaryGet
 import Data.Binary.Put as BinaryPut
 import Control.Monad.Loops
-
 
 
 -- data types ----------------------------------------------
@@ -125,8 +125,32 @@ instance Binary OLEDocument where
            return OLEDocument { header=header,
                                 bytes=bytes
                               }
+instance Binary Entry where
+  put = undefined
+  get = do name <- BinaryGet.getLazyByteString 64
+           return Entry { name=utf16BytesToString name,
+                          charBufferSize=0,
+                          entryType=EmptyEntry,
+                          nodeColor=UnknownNode,
+                          uniqueID=0,
+                          userFlags=0,
+                          timeCreated=0,
+                          timeModified=0,
+                          streamSectorID=0,
+                          streamSize=0
+                        }
+
 -- end of instances -----------------------------------------------------------
 -- functions ------------------------------------------------------------------
+utf16BytesToString :: B.ByteString -> String
+utf16BytesToString byteString = map unsafeChr (fromUTF16 (map fromIntegral (B.unpack byteString)))
+    where fromUTF16 :: [Int] -> [Int]
+          fromUTF16 (c1:c2:wcs)
+            | 0xd800 <= c1 && c1 <= 0xdbff && 0xdc00 <= c2 && c2 <= 0xdfff =
+              ((c1 - 0xd800)*0x400 + (c2 - 0xdc00) + 0x10000) : fromUTF16 wcs
+          fromUTF16 (c:wcs) = c : fromUTF16 wcs
+          fromUTF16 [] = []
+
 
 -- construct chain starting with startSector
 getChain :: SAT -> SectorID -> [SectorID]
@@ -143,7 +167,9 @@ getChainedBytes chain doc = B.concat byteStrings
           secSize' = 2 ^ (secSize (header doc))
 
 parseEntries :: B.ByteString ->  [Entry]
-parseEntries = undefined
+parseEntries bytes = BinaryGet.runGet parseSec bytes
+    where parseSec = sequence (replicate entriesCount get)
+          entriesCount = fromIntegral $ (B.length bytes) `div` 128
 
 getDirectory :: OLEDocument -> Directory
 getDirectory doc = Directory doc entries
