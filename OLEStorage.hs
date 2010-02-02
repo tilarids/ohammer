@@ -24,7 +24,7 @@ type SectorID = Word32
 -- master sector allocation table
 type MSAT =  [SectorID]
 
-type SAT = Array Int SectorID -- it's an allocation array
+type SAT = Array SectorID SectorID -- it's an allocation array
 
 -- in fact, it is not only the header. Now it is all the document itself
 data Header =
@@ -128,9 +128,31 @@ instance Binary OLEDocument where
 -- end of instances -----------------------------------------------------------
 -- functions ------------------------------------------------------------------
 
+-- construct chain starting with startSector
+getChain :: SAT -> SectorID -> [SectorID]
+getChain sat startSector = startSector : buildChain startSector
+   where buildChain curSec | sat ! curSec == -2 = []
+         buildChain curSec = newSec : buildChain newSec
+             where newSec = sat ! curSec
+
+getChainedBytes :: [SectorID] -> OLEDocument -> B.ByteString
+getChainedBytes chain doc = B.concat byteStrings
+    where byteStrings = map getStr chain
+          getStr :: SectorID -> B.ByteString
+          getStr theID = B.take secSize' (B.drop (secSize' * (fromIntegral theID)) (bytes doc))
+          secSize' = 2 ^ (secSize (header doc))
+
+parseEntries :: B.ByteString ->  [Entry]
+parseEntries = undefined
 
 getDirectory :: OLEDocument -> Directory
-getDirectory = undefined
+getDirectory doc = Directory doc entries
+    where dirID = secIDFirstDirStrm $ header doc
+          msat = getMSAT doc
+          sat = getSAT msat doc
+          chain = getChain sat dirID
+          chainedBytes = getChainedBytes chain doc
+          entries = parseEntries chainedBytes
 
 
 -- getMSAT now disregards MSAT's with num of secIDs > 109
@@ -140,14 +162,14 @@ getMSAT = secIDs . header -- just use secIDs from Header
 -- construct SAT using MSAT and sectors from OLEDocument
 -- (get the data from all sectors that are defined in MSAT)
 getSAT :: MSAT -> OLEDocument -> SAT
-getSAT masterSAT doc = listArray (1, (length sat)) sat
+getSAT masterSAT doc = listArray (1, (fromIntegral (length sat))) sat
     where sat = concat listOfIDs
           listOfIDs = map parseID masterSAT
           parseID theID = BinaryGet.runGet parseSec (B.drop (fromIntegral (secSize'* theID)) (bytes doc))
           parseSec = sequence (replicate idCount BinaryGet.getWord32host)
---          secSize' :: Word32
+          secSize' :: Word32
           secSize' = 2 ^ (secSize (header doc)) -- it is Word32 as needed by parseID
---          idCount :: Int
+          idCount :: Int
           idCount = (fromIntegral secSize') `div` 4 -- it is Int as needed by parseSec
                                                     -- that's why fromIntegral is used
 
