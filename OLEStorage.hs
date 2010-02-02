@@ -61,7 +61,7 @@ data EntryNodeColor = RedNode | BlackNode | UnknownNode
 
 data Entry =
   Entry { name                    :: String,
-          charBufferSize          :: Word16,
+          charBufferSize          :: Word16, -- should be ignored - TODO
           entryType               :: EntryType,
           nodeColor               :: EntryNodeColor,
           dirIDLeft               :: Word32,
@@ -104,10 +104,8 @@ instance Binary Header where
            numSecSSAT <- BinaryGet.getWord32host
            secIDFirstMSAT <- BinaryGet.getWord32host
            numSecMSAT <- BinaryGet.getWord32host
-           -- it can lead to a bug
-           -- TODO: fix
-           secIDs <- (unfoldM (do x <- BinaryGet.getWord32host
-                                  return $ if (x == -1) then Nothing else Just x))
+           allSecIDs <- sequence (replicate 109 BinaryGet.getWord32host)
+
            return Header { docId=docId,
                            uId=uId,
                            revision=revision,
@@ -122,7 +120,7 @@ instance Binary Header where
                            numSecSSAT=numSecSSAT,
                            secIDFirstMSAT=secIDFirstMSAT,
                            numSecMSAT=numSecMSAT,
-                           secIDs=secIDs
+                           secIDs=takeWhile (/= -1) allSecIDs
                          }
 
 instance Binary OLEDocument where
@@ -134,10 +132,10 @@ instance Binary OLEDocument where
                               }
 instance Binary Entry where
   put = undefined
-  get = do name <- BinaryGet.getLazyByteString 64
+  get = do name <- sequence (replicate 32 BinaryGet.getWord16host)
            charBufferSize <- BinaryGet.getWord16host
-           entryType <- BinaryGet.getWordhost
-           nodeColor <- BinaryGet.getWordhost
+           entryType <- BinaryGet.getWord8
+           nodeColor <- BinaryGet.getWord8
            dirIDLeft <- BinaryGet.getWord32host
            dirIDRight <- BinaryGet.getWord32host
            dirIDRoot <- BinaryGet.getWord32host
@@ -147,6 +145,7 @@ instance Binary Entry where
            timeModified <- BinaryGet.getWord64host
            streamSectorID <- BinaryGet.getWord32host
            streamSize <- BinaryGet.getWord32host
+           BinaryGet.getLazyByteString 4 -- unused
            return Entry { name=utf16BytesToString name,
                           charBufferSize=charBufferSize,
                           entryType=parseEntryType entryType,
@@ -165,20 +164,22 @@ instance Binary Entry where
 -- end of instances -----------------------------------------------------------
 -- functions ------------------------------------------------------------------
 
-parseEntryType :: Word -> EntryType
+parseEntryType :: Word8 -> EntryType
 parseEntryType 0 = EmptyEntry
 parseEntryType 1 = UserStorageEntry
 parseEntryType 2 = UserStreamEntry
 parseEntryType 3 = LockBytesEntry
 parseEntryType 4 = ProperyEntry
 parseEntryType 5 = RootStorageEntry
+parseEntryType x = error $ "Got " ++ (show x) ++ ". Can't parse"
 
-parseNodeColor :: Word -> EntryNodeColor
+parseNodeColor :: Word8 -> EntryNodeColor
 parseNodeColor 0 = RedNode
 parseNodeColor 1 = BlackNode
+parseNodeColor x = error $ "Got " ++ (show x) ++ ". Can't parse"
 
-utf16BytesToString :: B.ByteString -> String
-utf16BytesToString byteString = map unsafeChr (fromUTF16 (map fromIntegral (B.unpack byteString)))
+utf16BytesToString :: [Word16] -> String
+utf16BytesToString from = takeWhile (/= '\NUL') $ map unsafeChr (fromUTF16 (map fromIntegral from))
     where fromUTF16 :: [Int] -> [Int]
           fromUTF16 (c1:c2:wcs)
             | 0xd800 <= c1 && c1 <= 0xdbff && 0xdc00 <= c2 && c2 <= 0xdfff =
@@ -221,7 +222,7 @@ getMSAT = secIDs . header -- just use secIDs from Header
 -- construct SAT using MSAT and sectors from OLEDocument
 -- (get the data from all sectors that are defined in MSAT)
 getSAT :: MSAT -> OLEDocument -> SAT
-getSAT masterSAT doc = listArray (1, (fromIntegral (length sat))) sat
+getSAT masterSAT doc = listArray (0, (fromIntegral (length sat)) - 1) sat
     where sat = concat listOfIDs
           listOfIDs = map parseID masterSAT
           parseID theID = BinaryGet.runGet parseSec (B.drop (fromIntegral (secSize'* theID)) (bytes doc))
