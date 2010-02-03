@@ -10,4 +10,6 @@ dumpPPT file = sHeaderInfo ++ sDirectoryInfo
 
 main = do
     input  <- B.readFile "test.ppt"
-    writeFile "dump.out" (dumpPPT input)
+    -- writeFile "dump.out" (dumpPPT input)
+    B.writeFile "PowerPoint Document.dump" (extractEntry input "PowerPoint Document")
+

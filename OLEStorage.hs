@@ -60,7 +60,7 @@ data EntryNodeColor = RedNode | BlackNode | UnknownNode
   deriving (Show)
 
 data Entry =
-  Entry { name                    :: String,
+  Entry { entryName               :: String,
           charBufferSize          :: Word16, -- should be ignored - TODO
           entryType               :: EntryType,
           nodeColor               :: EntryNodeColor,
@@ -146,7 +146,7 @@ instance Binary Entry where
            streamSectorID <- BinaryGet.getWord32host
            streamSize <- BinaryGet.getWord32host
            BinaryGet.getLazyByteString 4 -- unused
-           return Entry { name=utf16BytesToString name,
+           return Entry { entryName=utf16BytesToString name,
                           charBufferSize=charBufferSize,
                           entryType=parseEntryType entryType,
                           nodeColor=parseNodeColor nodeColor,
@@ -188,9 +188,11 @@ utf16BytesToString from = takeWhile (/= '\NUL') $ map unsafeChr (fromUTF16 (map 
           fromUTF16 [] = []
 
 -- construct chain starting with startSector
-getChain :: SAT -> SectorID -> [SectorID]
-getChain sat startSector = startSector : buildChain startSector
-   where buildChain curSec | sat ! curSec == -2 = []
+getChain :: OLEDocument -> SectorID -> [SectorID]
+getChain doc startSector = startSector : buildChain startSector
+   where msat = getMSAT doc
+         sat = getSAT msat doc
+         buildChain curSec | sat ! curSec == -2 = []
          buildChain curSec = newSec : buildChain newSec
              where newSec = sat ! curSec
 
@@ -209,9 +211,7 @@ parseEntries bytes = BinaryGet.runGet parseSec bytes
 getDirectory :: OLEDocument -> Directory
 getDirectory doc = Directory doc entries
     where dirID = secIDFirstDirStrm $ header doc
-          msat = getMSAT doc
-          sat = getSAT msat doc
-          chain = getChain sat dirID
+          chain = getChain doc dirID
           chainedBytes = getChainedBytes chain doc
           entries = parseEntries chainedBytes
 
