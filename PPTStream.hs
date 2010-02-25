@@ -35,28 +35,19 @@ instance Binary PPTRecordHeader where
                                     recLen=recLen
                                   }
 
--- readPPTChildren :: PPTRecordHeader -> Word32 -> Get (Maybe (PPTNode, Word32))
--- readPPTChildren recHeader acc = if acc == (recLen recHeader)
---                                    then Get Nothing
---                                    else do node <- get
---                                            node :: PPTNode
---                                            return Just (node, acc + recLen (recordHeader node))
-
--- readPPTChildren2 :: PPTRecordHeader -> [Get PPTNode]
--- readPPTChildren2 header = impl 0 []
---     where impl total l
---             | total == (recLen header) = reverse l
---             | otherwise = do node <- get
---                              node :: PPTNode
---                              return (impl (total + recLen (recordHeader node)) (node : l))
---           impl :: Word32 -> [PPTNode] -> [PPTNode]
+readPPTChildren header = unfoldrM f 0
+    where f acc
+            | acc == recLen header = do return Nothing
+            | otherwise = do node <- get
+                             return $ Just (node, acc + recLen (recordHeader node) + 8) -- 8 is a length of header
 
 instance Binary PPTNode where
   put = undefined
   get = do recHeader <- get
            if isContainer recHeader
-              then do return PPTContainer { recordHeader=recHeader,
-                                            childrenNodes=[]
+              then do children <- readPPTChildren recHeader
+                      return PPTContainer { recordHeader=recHeader,
+                                            childrenNodes=children
                                           }
               else do nodeBinary <- BinaryGet.getLazyByteString $ fromIntegral (recLen recHeader)
                       return PPTAtom { recordHeader=recHeader,
