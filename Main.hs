@@ -14,9 +14,10 @@ main = do
     input  <- B.readFile "test.ppt"
     -- writeFile "dump.out" (dumpPPT input)
     let rawStream = extractEntry input "PowerPoint Document"
+    -- print (parsePPTStream rawStream)
     runX ( constA (parsePPTStream rawStream)
            >>>
-	   xpickleDocument xpPPTNode
+           xpickleDocument xpPPTNode
              [ (a_indent, v_1)
              ] "dump.xml"
          )

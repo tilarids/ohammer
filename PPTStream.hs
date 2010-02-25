@@ -15,6 +15,7 @@ data PPTRecordHeader = PPTRecordHeader { recVer         :: Int, -- first 4 bits
                                          recType        :: Word16, -- next 2 bytes, should be converted later
                                          recLen         :: Word32 -- next 4 bytes 
                                        }
+  deriving (Show)
 
 data PPTNode = PPTContainer { recordHeader                   :: PPTRecordHeader, -- header
                               childrenNodes                  :: [PPTNode]  -- children
@@ -22,6 +23,7 @@ data PPTNode = PPTContainer { recordHeader                   :: PPTRecordHeader,
                PPTAtom      { recordHeader                   :: PPTRecordHeader, -- header
                               nodeBinary                     :: B.ByteString -- binaryData
                             }
+  deriving (Show)
 -- end of data types ------------------------------------------------------------------
 -- instances --------------------------------------------------------------------------
 instance Binary PPTRecordHeader where
@@ -29,8 +31,8 @@ instance Binary PPTRecordHeader where
   get = do verAndInstance <- BinaryGet.getWord16le
            recType <- BinaryGet.getWord16le
            recLen <- BinaryGet.getWord32le
-           return PPTRecordHeader { recVer=shiftR 12 (fromIntegral (verAndInstance .&. 0xf000)),
-                                    recInstance=fromIntegral $ verAndInstance .&. 0x0fff,
+           return PPTRecordHeader { recVer=fromIntegral $ verAndInstance .&. 0x000f,
+                                    recInstance=shiftR 4 (fromIntegral (verAndInstance .&. 0xfff0)), -- TODO: fix
                                     recType=recType,
                                     recLen=recLen
                                   }
@@ -53,12 +55,10 @@ instance Binary PPTNode where
                       return PPTAtom { recordHeader=recHeader,
                                        nodeBinary=nodeBinary
                                      }
-           return PPTContainer {recordHeader=recHeader,
-                                childrenNodes=[]}
 -- end of instances--------------------------------------------------------------------
 -- functions --------------------------------------------------------------------------
 isContainer :: PPTRecordHeader -> Bool
-isContainer header = isCont && (0x0428 == recType header) -- old (pre SP1) PP2007 bug: RT_RoundTripCustomTableStyles12Atom has rec_ver==0xF
+isContainer header = isCont && (0x0428 /= recType header) -- old (pre SP1) PP2007 bug: RT_RoundTripCustomTableStyles12Atom has rec_ver==0xF
     where isCont = 0xF == recVer header
 
 parsePPTStream :: B.ByteString -> PPTNode
