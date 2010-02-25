@@ -61,7 +61,8 @@ isContainer :: PPTRecordHeader -> Bool
 isContainer header = isCont && (0x0428 == recType header) -- old (pre SP1) PP2007 bug: RT_RoundTripCustomTableStyles12Atom has rec_ver==0xF
     where isCont = 0xF == recVer header
 
-parsePPTStream = parseDocument
+parsePPTStream :: B.ByteString -> PPTNode
+parsePPTStream = decode
 
 streamHeaderInfo :: OLEDocument -> String
 streamHeaderInfo (OLEDocument header _) = show header
