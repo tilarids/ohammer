@@ -15,7 +15,8 @@ main = do
     -- writeFile "dump.out" (dumpPPT input)
     let rawStream = extractEntry input "PowerPoint Document"
     -- print (parsePPTStream rawStream)
-    runX ( constA (parsePPTStream rawStream)
+    let parsed = parsePPTStream rawStream
+    runX ( constA parsed
            >>>
            xpickleDocument xpPPTNode
              [ (a_indent, v_1)

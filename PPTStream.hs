@@ -62,7 +62,13 @@ isContainer header = isCont && (0x0428 /= recType header) -- old (pre SP1) PP200
     where isCont = 0xF == recVer header
 
 parsePPTStream :: B.ByteString -> PPTNode
-parsePPTStream = decode
+parsePPTStream bs = PPTContainer { recordHeader=rootHeader,
+                                   childrenNodes=children
+                                 }
+    where rootHeader = PPTRecordHeader { recVer=0xF, recInstance=0, recType=0xFFFF, 
+                                         recLen=fromIntegral (B.length bs)
+                                       }
+          children = runGet (readPPTChildren rootHeader) bs
 
 streamHeaderInfo :: OLEDocument -> String
 streamHeaderInfo (OLEDocument header _) = show header
