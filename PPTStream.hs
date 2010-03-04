@@ -13,7 +13,7 @@ import Control.Monad.Loops
 data PPTRecordHeader = PPTRecordHeader { recVer         :: Int, -- first 4 bits
                                          recInstance    :: Int, -- next 12 bits
                                          recType        :: Word16, -- next 2 bytes, should be converted later
-                                         recLen         :: Word32 -- next 4 bytes 
+                                         recLen         :: Word32 -- next 4 bytes
                                        }
   deriving (Show)
 
@@ -65,7 +65,7 @@ parsePPTStream :: B.ByteString -> PPTNode
 parsePPTStream bs = PPTContainer { recordHeader=rootHeader,
                                    childrenNodes=children
                                  }
-    where rootHeader = PPTRecordHeader { recVer=0xF, recInstance=0, recType=0xFFFF, 
+    where rootHeader = PPTRecordHeader { recVer=0xF, recInstance=0, recType=0xFFFF,
                                          recLen=fromIntegral (B.length bs)
                                        }
           children = runGet (readPPTChildren rootHeader) bs
