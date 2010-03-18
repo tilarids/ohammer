@@ -6,8 +6,8 @@ license: GPL
 license-file: ""
 copyright:
 maintainer: Sergey Kishchenko
-build-depends: array -any, base -any, binary -any, bytestring -any,
-               haskell98 -any, hxt -any, monad-loops -any
+build-depends: monad-loops -any, hxt -any, haskell98 -any,
+               bytestring -any, binary -any, base -any, array -any
 stability: alpha
 homepage: http://tilarids.blogspot.com
 package-url:
@@ -39,7 +39,7 @@ includes:
 install-includes:
 include-dirs:
 hs-source-dirs: .
-other-modules:
+other-modules: DOCStream OLEStorage PPTStream XMLPickle
 ghc-prof-options:
 ghc-shared-options:
 ghc-options:

@@ -1,6 +1,8 @@
 module OLEStorage where
 
 import GHC.Base
+import List
+import Maybe
 import qualified Data.ByteString.Lazy as B
 import Data.Binary
 import Data.Array.IArray
@@ -241,3 +243,10 @@ parseDocument = decode
 
 parseByteOrder :: Word16 -> ByteOrder
 parseByteOrder x = undefined
+
+extractEntry file name = B.take (fromIntegral (streamSize entry)) (getBytes entry)
+    where doc = parseDocument file
+          dir = getDirectory doc
+          entry = fromJust $ find (\x -> (entryName x) == name) (entries dir)
+          getBytes entry = getChainedBytes (chain entry) doc
+          chain entry = getChain doc (streamSectorID entry)
