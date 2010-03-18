@@ -30,6 +30,6 @@ import qualified Data.ByteString.Lazy as B
 
 main = do
     input  <- B.readFile "test.doc"
-    let rawStream = extractEntry input "Word Document"
+    let rawStream = extractEntry input "WordDocument"
     let parsed = parseDOCStream rawStream
-    B.writeFile "Word Document.dump" parsed
+    B.writeFile "WordDocument.dump" parsed
