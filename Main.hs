@@ -34,3 +34,4 @@ main = do
     let parsed = parseDOCStream rawStream
     -- B.writeFile "WordDocument.dump" parsed
     writeFile "WordDocument.dump" (show parsed)
+    print (getDocumentText parsed 0)

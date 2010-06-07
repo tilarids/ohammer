@@ -3,6 +3,7 @@ module DOCStream  where
 import Data.Binary
 import Data.Binary.Get as BinaryGet
 import qualified Data.ByteString.Lazy as B
+import Data.Array
 
 -- data types -------------------------------------------------------------------------
 type CharPos = Word32 -- Character Position or CP
@@ -36,40 +37,29 @@ data FileInfoBlockRgLw = FileInfoBlockRgLw { cbMac          :: Word32,
   deriving (Show)
 
 -- FibRgFcLcb
-data FileInfoBlockRgFcLcb97 = FileInfoBlockRgFcLcb97 { fcStshfOrig :: Word32, lcbStshfOrig :: Word32, fcStshf :: Word32, lcbStshf :: Word32, fcPlcffndRef :: Word32, lcbPlcffndRef :: Word32,
-                                                       fcPlcffndTxt :: Word32, lcbPlcffndTxt :: Word32, fcPlcfandRef :: Word32, lcbPlcfandRef :: Word32, fcPlcfandTxt :: Word32,
-                                                       lcbPlcfandTxt :: Word32, fcPlcfSed :: Word32, lcbPlcfSed :: Word32, fcPlcPad :: Word32, lcbPlcPad :: Word32, fcPlcfPhe :: Word32,
-                                                       lcbPlcfPhe :: Word32, fcSttbfGlsy :: Word32, lcbSttbfGlsy :: Word32, fcPlcfGlsy :: Word32, lcbPlcfGlsy :: Word32, fcPlcfHdd :: Word32,
-                                                       lcbPlcfHdd :: Word32, fcPlcfBteChpx :: Word32, lcbPlcfBteChpx :: Word32, fcPlcfBtePapx :: Word32, lcbPlcfBtePapx :: Word32, fcPlcfSea :: Word32,
-                                                       lcbPlcfSea :: Word32, fcSttbfFfn :: Word32, lcbSttbfFfn :: Word32, fcPlcfFldMom :: Word32, lcbPlcfFldMom :: Word32, fcPlcfFldHdr :: Word32,
-                                                       lcbPlcfFldHdr :: Word32, fcPlcfFldFtn :: Word32, lcbPlcfFldFtn :: Word32, fcPlcfFldAtn :: Word32, lcbPlcfFldAtn :: Word32, fcPlcfFldMcr :: Word32,
-                                                       lcbPlcfFldMcr :: Word32, fcSttbfBkmk :: Word32, lcbSttbfBkmk :: Word32, fcPlcfBkf :: Word32, lcbPlcfBkf :: Word32, fcPlcfBkl :: Word32,
-                                                       lcbPlcfBkl :: Word32, fcCmds :: Word32, lcbCmds :: Word32, fcUnused1 :: Word32, lcbUnused1 :: Word32, fcSttbfMcr :: Word32, lcbSttbfMcr :: Word32,
-                                                       fcPrDrvr :: Word32, lcbPrDrvr :: Word32, fcPrEnvPort :: Word32, lcbPrEnvPort :: Word32, fcPrEnvLand :: Word32, lcbPrEnvLand :: Word32,
-                                                       fcWss :: Word32, lcbWss :: Word32, fcDop :: Word32, lcbDop :: Word32, fcSttbfAssoc :: Word32, lcbSttbfAssoc :: Word32, fcClx :: Word32,
-                                                       lcbClx :: Word32, fcPlcfPgdFtn :: Word32, lcbPlcfPgdFtn :: Word32, fcAutosaveSource :: Word32, lcbAutosaveSource :: Word32,
-                                                       fcGrpXstAtnOwners :: Word32, lcbGrpXstAtnOwners :: Word32, fcSttbfAtnBkmk :: Word32, lcbSttbfAtnBkmk :: Word32, fcUnused2 :: Word32,
-                                                       lcbUnused2 :: Word32, fcUnused3 :: Word32, lcbUnused3 :: Word32, fcPlcSpaMom :: Word32, lcbPlcSpaMom :: Word32, fcPlcSpaHdr :: Word32,
-                                                       lcbPlcSpaHdr :: Word32, fcPlcfAtnBkf :: Word32, lcbPlcfAtnBkf :: Word32, fcPlcfAtnBkl :: Word32, lcbPlcfAtnBkl :: Word32, fcPms :: Word32,
-                                                       lcbPms :: Word32, fcFormFldSttbs :: Word32, lcbFormFldSttbs :: Word32, fcPlcfendRef :: Word32, lcbPlcfendRef :: Word32, fcPlcfendTxt :: Word32,
-                                                       lcbPlcfendTxt :: Word32, fcPlcfFldEdn :: Word32, lcbPlcfFldEdn :: Word32, fcUnused4 :: Word32, lcbUnused4 :: Word32, fcDggInfo :: Word32,
-                                                       lcbDggInfo :: Word32, fcSttbfRMark :: Word32, lcbSttbfRMark :: Word32, fcSttbfCaption :: Word32, lcbSttbfCaption :: Word32, fcSttbfAutoCaption :: Word32,
-                                                       lcbSttbfAutoCaption :: Word32, fcPlcfWkb :: Word32, lcbPlcfWkb :: Word32, fcPlcfSpl :: Word32, lcbPlcfSpl :: Word32, fcPlcftxbxTxt :: Word32,
-                                                       lcbPlcftxbxTxt :: Word32, fcPlcfFldTxbx :: Word32, lcbPlcfFldTxbx :: Word32, fcPlcfHdrtxbxTxt :: Word32, lcbPlcfHdrtxbxTxt :: Word32,
-                                                       fcPlcffldHdrTxbx :: Word32, lcbPlcffldHdrTxbx :: Word32, fcStwUser :: Word32, lcbStwUser :: Word32, fcSttbTtmbd :: Word32, lcbSttbTtmbd :: Word32,
-                                                       fcCookieData :: Word32, lcbCookieData :: Word32, fcPgdMotherOldOld :: Word32, lcbPgdMotherOldOld :: Word32, fcBkdMotherOldOld :: Word32,
-                                                       lcbBkdMotherOldOld :: Word32, fcPgdFtnOldOld :: Word32, lcbPgdFtnOldOld :: Word32, fcBkdFtnOldOld :: Word32, lcbBkdFtnOldOld :: Word32,
-                                                       fcPgdEdnOldOld :: Word32, lcbPgdEdnOldOld :: Word32, fcBkdEdnOldOld :: Word32, lcbBkdEdnOldOld :: Word32, fcSttbfIntlFld :: Word32, lcbSttbfIntlFld :: Word32,
-                                                       fcRouteSlip :: Word32, lcbRouteSlip :: Word32, fcSttbSavedBy :: Word32, lcbSttbSavedBy :: Word32, fcSttbFnm :: Word32, lcbSttbFnm :: Word32,
-                                                       fcPlfLst :: Word32, lcbPlfLst :: Word32, fcPlfLfo :: Word32, lcbPlfLfo :: Word32, fcPlcfTxbxBkd :: Word32, lcbPlcfTxbxBkd :: Word32,
-                                                       fcPlcfTxbxHdrBkd :: Word32, lcbPlcfTxbxHdrBkd :: Word32, fcDocUndoWord9 :: Word32, lcbDocUndoWord9 :: Word32, fcRgbUse :: Word32, lcbRgbUse :: Word32,
-                                                       fcUsp :: Word32, lcbUsp :: Word32, fcUskf :: Word32, lcbUskf :: Word32, fcPlcupcRgbUse :: Word32, lcbPlcupcRgbUse :: Word32, fcPlcupcUsp :: Word32,
-                                                       lcbPlcupcUsp :: Word32, fcSttbGlsyStyle :: Word32, lcbSttbGlsyStyle :: Word32, fcPlgosl :: Word32, lcbPlgosl :: Word32, fcPlcocx :: Word32,
-                                                       lcbPlcocx :: Word32, fcPlcfBteLvc :: Word32, lcbPlcfBteLvc :: Word32, dwLowDateTime :: Word32, dwHighDateTime :: Word32, fcPlcfLvcPre10 :: Word32,
-                                                       lcbPlcfLvcPre10 :: Word32, fcPlcfAsumy :: Word32, lcbPlcfAsumy :: Word32, fcPlcfGram :: Word32, lcbPlcfGram :: Word32, fcSttbListNames :: Word32,
-                                                       lcbSttbListNames :: Word32, fcSttbfUssr :: Word32, lcbSttbfUssr :: Word32
-                                                     }
-  deriving (Show)
+
+-- fcStshfOrig = 0, lcbStshfOrig = 1, fcStshf = 2, lcbStshf = 3, fcPlcffndRef = 4, lcbPlcffndRef = 5, fcPlcffndTxt = 6, lcbPlcffndTxt = 7, fcPlcfandRef = 8, lcbPlcfandRef = 9, fcPlcfandTxt = 10,
+-- lcbPlcfandTxt = 11, fcPlcfSed = 12, lcbPlcfSed = 13, fcPlcPad = 14, lcbPlcPad = 15, fcPlcfPhe = 16, lcbPlcfPhe = 17, fcSttbfGlsy = 18, lcbSttbfGlsy = 19, fcPlcfGlsy = 20, lcbPlcfGlsy = 21,
+-- fcPlcfHdd = 22, lcbPlcfHdd = 23, fcPlcfBteChpx = 24, lcbPlcfBteChpx = 25, fcPlcfBtePapx = 26, lcbPlcfBtePapx = 27, fcPlcfSea = 28, lcbPlcfSea = 29, fcSttbfFfn = 30, lcbSttbfFfn = 31,
+-- fcPlcfFldMom = 32, lcbPlcfFldMom = 33, fcPlcfFldHdr = 34, lcbPlcfFldHdr = 35, fcPlcfFldFtn = 36, lcbPlcfFldFtn = 37, fcPlcfFldAtn = 38, lcbPlcfFldAtn = 39, fcPlcfFldMcr = 40, lcbPlcfFldMcr = 41,
+-- fcSttbfBkmk = 42, lcbSttbfBkmk = 43, fcPlcfBkf = 44, lcbPlcfBkf = 45, fcPlcfBkl = 46, lcbPlcfBkl = 47, fcCmds = 48, lcbCmds = 49, fcUnused1 = 50, lcbUnused1 = 51, fcSttbfMcr = 52, lcbSttbfMcr = 53,
+-- fcPrDrvr = 54, lcbPrDrvr = 55, fcPrEnvPort = 56, lcbPrEnvPort = 57, fcPrEnvLand = 58, lcbPrEnvLand = 59, fcWss = 60, lcbWss = 61, fcDop = 62, lcbDop = 63, fcSttbfAssoc = 64, lcbSttbfAssoc = 65,
+-- fcClx = 66, lcbClx = 67, fcPlcfPgdFtn = 68, lcbPlcfPgdFtn = 69, fcAutosaveSource = 70, lcbAutosaveSource = 71, fcGrpXstAtnOwners = 72, lcbGrpXstAtnOwners = 73, fcSttbfAtnBkmk = 74, lcbSttbfAtnBkmk = 75,
+-- fcUnused2 = 76, lcbUnused2 = 77, fcUnused3 = 78, lcbUnused3 = 79, fcPlcSpaMom = 80, lcbPlcSpaMom = 81, fcPlcSpaHdr = 82, lcbPlcSpaHdr = 83, fcPlcfAtnBkf = 84, lcbPlcfAtnBkf = 85, fcPlcfAtnBkl = 86,
+-- lcbPlcfAtnBkl = 87, fcPms = 88, lcbPms = 89, fcFormFldSttbs = 90, lcbFormFldSttbs = 91, fcPlcfendRef = 92, lcbPlcfendRef = 93, fcPlcfendTxt = 94, lcbPlcfendTxt = 95, fcPlcfFldEdn = 96, lcbPlcfFldEdn = 97,
+-- fcUnused4 = 98, lcbUnused4 = 99, fcDggInfo = 100, lcbDggInfo = 101, fcSttbfRMark = 102, lcbSttbfRMark = 103, fcSttbfCaption = 104, lcbSttbfCaption = 105, fcSttbfAutoCaption = 106, lcbSttbfAutoCaption = 107,
+-- fcPlcfWkb = 108, lcbPlcfWkb = 109, fcPlcfSpl = 110, lcbPlcfSpl = 111, fcPlcftxbxTxt = 112, lcbPlcftxbxTxt = 113, fcPlcfFldTxbx = 114, lcbPlcfFldTxbx = 115, fcPlcfHdrtxbxTxt = 116, lcbPlcfHdrtxbxTxt = 117,
+-- fcPlcffldHdrTxbx = 118, lcbPlcffldHdrTxbx = 119, fcStwUser = 120, lcbStwUser = 121, fcSttbTtmbd = 122, lcbSttbTtmbd = 123, fcCookieData = 124, lcbCookieData = 125, fcPgdMotherOldOld = 126,
+-- lcbPgdMotherOldOld = 127, fcBkdMotherOldOld = 128, lcbBkdMotherOldOld = 129, fcPgdFtnOldOld = 130, lcbPgdFtnOldOld = 131, fcBkdFtnOldOld = 132, lcbBkdFtnOldOld = 133, fcPgdEdnOldOld = 134,
+-- lcbPgdEdnOldOld = 135, fcBkdEdnOldOld = 136, lcbBkdEdnOldOld = 137, fcSttbfIntlFld = 138, lcbSttbfIntlFld = 139, fcRouteSlip = 140, lcbRouteSlip = 141, fcSttbSavedBy = 142, lcbSttbSavedBy = 143,
+-- fcSttbFnm = 144, lcbSttbFnm = 145, fcPlfLst = 146, lcbPlfLst = 147, fcPlfLfo = 148, lcbPlfLfo = 149, fcPlcfTxbxBkd = 150, lcbPlcfTxbxBkd = 151, fcPlcfTxbxHdrBkd = 152, lcbPlcfTxbxHdrBkd = 153,
+-- fcDocUndoWord9 = 154, lcbDocUndoWord9 = 155, fcRgbUse = 156, lcbRgbUse = 157, fcUsp = 158, lcbUsp = 159, fcUskf = 160, lcbUskf = 161, fcPlcupcRgbUse = 162, lcbPlcupcRgbUse = 163,
+-- fcPlcupcUsp = 164, lcbPlcupcUsp = 165, fcSttbGlsyStyle = 166, lcbSttbGlsyStyle = 167, fcPlgosl = 168, lcbPlgosl = 169, fcPlcocx = 170, lcbPlcocx = 171, fcPlcfBteLvc = 172, lcbPlcfBteLvc = 173,
+-- dwLowDateTime = 174, dwHighDateTime = 175, fcPlcfLvcPre10 = 176, lcbPlcfLvcPre10 = 177, fcPlcfAsumy = 178, lcbPlcfAsumy = 179, fcPlcfGram = 180, lcbPlcfGram = 181, fcSttbListNames = 182,
+-- lcbSttbListNames = 183, fcSttbfUssr = 184, lcbSttbfUssr = 185
+
+type FileInfoBlockRgFcLcb97 = Array Int Word32
+
 
 data FileInfoBlockRgFcLcbBlob = FileInfoBlockRgFcLcbBlob { rgFcLcb97        :: FileInfoBlockRgFcLcb97,
                                                            rgFcLcbBlobBytes :: B.ByteString
@@ -91,7 +81,7 @@ data FileInfoBlock = FileInfoBlock { fibBase                :: FileInfoBlockBase
   deriving (Show)
 
 data WordDocument = WordDocument { fileInfoBlock            :: FileInfoBlock,
-                                   wordRemainingBytes       :: B.ByteString 
+                                   wordRemainingBytes       :: B.ByteString
                                  }
   deriving (Show)
 
@@ -105,15 +95,15 @@ instance Binary FileInfoBlock where
            BinaryGet.getLazyByteString 2 -- unused cslw
            fibRgLw <- get
            BinaryGet.getLazyByteString 2 -- unused cbRgFcLcb
+           rgFcLcb97 <- sequence (replicate 186 BinaryGet.getWord32le)
            let remainingLcbBlobBytes = 8 * convertnFibLcb (nFib fibBase) - 744 -- 744 is a size in bytes of rgFcLcb97
-           rgFcLcb97 <- get
            rgFcLcbBlobBytes <- BinaryGet.getLazyByteString remainingLcbBlobBytes -- just get the bytes
            BinaryGet.getLazyByteString 2 -- unused cswNew
            rgCswNewBytes <- BinaryGet.getLazyByteString $ 2 * convertnFibCsw (nFib fibBase) -- just get the bytes
            return FileInfoBlock { fibBase=fibBase,
                                   fibRgW=fibRgW,
                                   fibRgLw=fibRgLw,
-                                  fibRgFcLcbBlob=FileInfoBlockRgFcLcbBlob { rgFcLcb97=rgFcLcb97,
+                                  fibRgFcLcbBlob=FileInfoBlockRgFcLcbBlob { rgFcLcb97=listArray (0,185) rgFcLcb97,
                                                                             rgFcLcbBlobBytes=rgFcLcbBlobBytes },
                                   fibRgCswNew=FileInfoBlockRgCswNew {rgCswNewBytes=rgCswNewBytes}
                                 }
@@ -167,9 +157,6 @@ instance Binary FileInfoBlockRgLw where
                                       ccpTxbx=ccpTxbx,
                                       ccpHdrTxBx=ccpHdrTxBx
                                     }
-instance Binary FileInfoBlockRgFcLcb97 where
-  put = undefined
-  get = undefined
 
 instance Binary WordDocument where
   put = undefined
@@ -184,6 +171,13 @@ instance Binary WordDocument where
 parseDOCStream :: B.ByteString -> WordDocument
 parseDOCStream = decode
 
+
+getDocumentText :: WordDocument -> Int -> Word32
+getDocumentText doc cp = clxOffset
+    where fib = fileInfoBlock doc
+          fcLcb97 = rgFcLcb97 (fibRgFcLcbBlob fib)
+          clxOffset = fcClx fcLcb97
+
 convertnFibLcb 0x00C1 = 0x005D
 convertnFibLcb 0x00D9 = 0x006C
 convertnFibLcb 0x0101 = 0x0088
@@ -196,3 +190,7 @@ convertnFibCsw 0x0101 = 0x0002
 convertnFibCsw 0x010C = 0x0002
 convertnFibCsw 0x0112 = 0x0005
 convertnFibCsw _ = undefined
+
+
+fcClx :: FileInfoBlockRgFcLcb97 -> Word32
+fcClx x = x ! 66 -- 66 is for fcClx, see data definition
