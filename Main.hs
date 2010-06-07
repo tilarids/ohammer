@@ -32,4 +32,5 @@ main = do
     input  <- B.readFile "test.doc"
     let rawStream = extractEntry input "WordDocument"
     let parsed = parseDOCStream rawStream
-    B.writeFile "WordDocument.dump" parsed
+    -- B.writeFile "WordDocument.dump" parsed
+    writeFile "WordDocument.dump" (show parsed)
