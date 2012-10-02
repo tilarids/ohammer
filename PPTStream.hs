@@ -1,7 +1,7 @@
 module PPTStream where
 
-import List
-import Maybe
+import Data.List
+import Data.Maybe
 import OLEStorage
 import Data.Binary
 import Data.Binary.Get as BinaryGet

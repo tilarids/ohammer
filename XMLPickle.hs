@@ -1,7 +1,8 @@
 module XMLPickle where
 
 
-import Text.XML.HXT.Arrow
+import Text.XML.HXT.Arrow.Pickle.Xml
+import Text.XML.HXT.DOM.Util
 import PPTStream
 
 -- data types -------------------------------------------------------------------------

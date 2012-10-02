@@ -6,8 +6,8 @@ license: GPL
 license-file: ""
 copyright:
 maintainer: Sergey Kishchenko
-build-depends: array -any, base -any, binary -any, bytestring -any,
-               haskell98 -any, hxt -any, monad-loops -any
+build-depends: array -any, base >=4, binary -any, bytestring -any,
+               hxt -any, monad-loops -any
 stability: alpha
 homepage: http://tilarids.blogspot.com
 package-url:
