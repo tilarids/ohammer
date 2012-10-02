@@ -7,6 +7,9 @@ import Data.Array.IArray
 import Data.Binary.Get as BinaryGet
 import Data.Binary.Put as BinaryPut
 import Control.Monad.Loops
+import System.FilePath.Posix
+
+import Debug.Trace
 
 
 -- data types ----------------------------------------------
@@ -25,6 +28,8 @@ type SectorID = Word32
 type MSAT =  [SectorID]
 
 type SAT = Array SectorID SectorID -- it's an allocation array
+
+type SSAT = B.ByteString
 
 -- in fact, it is not only the header. Now it is all the document itself
 data Header =
@@ -54,7 +59,7 @@ data OLEDocument =
   deriving (Show)
 
 data EntryType = EmptyEntry | UserStorageEntry | UserStreamEntry | LockBytesEntry | ProperyEntry | RootStorageEntry
-  deriving (Show)
+  deriving (Show, Eq)
 
 data EntryNodeColor = RedNode | BlackNode | UnknownNode
   deriving (Show)
@@ -188,20 +193,39 @@ utf16BytesToString from = takeWhile (/= '\NUL') $ map unsafeChr (fromUTF16 (map 
           fromUTF16 [] = []
 
 -- construct chain starting with startSector
-getChain :: OLEDocument -> SectorID -> [SectorID]
-getChain doc startSector = startSector : buildChain startSector
-   where msat = getMSAT doc
-         sat = getSAT msat doc
+getChain :: OLEDocument -> SAT -> SectorID -> [SectorID]
+getChain doc sat startSector = startSector : buildChain startSector
+   where buildChain curSec | sat ! curSec == -1 = error "Got -1 as SecID. -1 indicates a free cell"
          buildChain curSec | sat ! curSec == -2 = []
+         buildChain curSec | sat ! curSec == -3 = error "Got -3 as SecID. -3 indicates a cell is used by SAT"
+         buildChain curSec | sat ! curSec == -4 = error "Got -4 as SecID. -4 indicates a cell is used by MSAT"
          buildChain curSec = newSec : buildChain newSec
              where newSec = sat ! curSec
 
-getChainedBytes :: [SectorID] -> OLEDocument -> B.ByteString
-getChainedBytes chain doc = B.concat byteStrings
+getSATChain doc startSector = getChain doc sat startSector
+    where sat = getSAT msat doc
+          msat = getMSAT doc
+
+getSSATChain doc startSector = getChain doc (getSSAT doc) startSector
+
+getSATChainedBytes :: [SectorID] -> OLEDocument -> B.ByteString
+getSATChainedBytes chain doc = B.concat byteStrings
     where byteStrings = map getStr chain
           getStr :: SectorID -> B.ByteString
           getStr theID = B.take secSize' (B.drop (secSize' * (fromIntegral theID)) (bytes doc))
           secSize' = 2 ^ (secSize (header doc))
+
+getSSATChainedBytes :: [SectorID] -> OLEDocument -> B.ByteString
+getSSATChainedBytes chain doc = B.concat byteStrings
+    where byteStrings = map getStr chain
+          getStr :: SectorID -> B.ByteString
+          getStr theID = B.take secSize' $ getShortStreamContainerBytes doc
+          secSize' = 2 ^ (secSizeShort (header doc))
+
+getShortStreamContainerBytes :: OLEDocument -> B.ByteString
+getShortStreamContainerBytes doc = getSATChainedBytes chain doc
+    where dir = getDirectory doc
+          chain = getSATChain doc $ streamSectorID (head $ entries dir)
 
 parseEntries :: B.ByteString ->  [Entry]
 parseEntries bytes = BinaryGet.runGet parseSec bytes
@@ -211,13 +235,36 @@ parseEntries bytes = BinaryGet.runGet parseSec bytes
 getDirectory :: OLEDocument -> Directory
 getDirectory doc = Directory doc entries
     where dirID = secIDFirstDirStrm $ header doc
-          chain = getChain doc dirID
-          chainedBytes = getChainedBytes chain doc
+          chain = getSATChain doc dirID
+          chainedBytes = getSATChainedBytes chain doc
           entries = parseEntries chainedBytes
 
 -- getMSAT now disregards MSAT's with num of secIDs > 109
 getMSAT :: OLEDocument -> MSAT
 getMSAT = secIDs . header -- just use secIDs from Header
+
+getSSAT :: OLEDocument -> SAT
+getSSAT doc = listArray (0, (fromIntegral (length ssat)) - 1) ssat
+    where ssatId = secIDFirstSSAT (header doc)
+          chain = getSATChain doc ssatId
+          ssatBytes = getSATChainedBytes chain doc
+          ssat :: [Word32]
+          ssat = BinaryGet.runGet parseSec ssatBytes
+          parseSec = sequence (replicate idCount BinaryGet.getWord32host)
+          secSizeShort' :: Word32
+          secSizeShort' = 2 ^ (secSizeShort (header doc)) -- it is Word32 as needed by parseID
+          idCount :: Int
+          idCount = (fromIntegral secSizeShort') `div` 4 -- it is Int as needed by parseSec
+                                                         -- that's why fromIntegral is used
+
+getEntryBytes :: OLEDocument -> Entry -> B.ByteString
+getEntryBytes doc entry 
+    |    (entryType entry /= RootStorageEntry) 
+      && (streamSize entry) < (minStreamSize (header doc)) = getSSATChainedBytes chain doc
+  where chain = getSSATChain doc (streamSectorID entry)
+getEntryBytes doc entry = getSATChainedBytes chain doc
+  where chain = getSATChain doc (streamSectorID entry)
+
 
 -- construct SAT using MSAT and sectors from OLEDocument
 -- (get the data from all sectors that are defined in MSAT)
@@ -241,3 +288,18 @@ parseDocument = decode
 
 parseByteOrder :: Word16 -> ByteOrder
 parseByteOrder x = undefined
+
+dumpDocument :: OLEDocument -> String -> IO ()
+dumpDocument doc dirName = mapM_ dumpEntry $ entries dir
+    where dir = getDirectory doc
+          dumpEntry entry | (entryType entry == EmptyEntry) = return ()
+          dumpEntry entry = do
+              let fname = (dumpName entry)
+              putStr $ "Dumping " ++ fname ++ "..."
+              B.writeFile fname (getEntryBytes doc entry)
+              putStrLn "Done!"
+          dumpName entry = combine dirName (entryName entry)
+
+dumpOLEStorage :: B.ByteString -> String -> IO ()
+dumpOLEStorage input dirName = dumpDocument doc dirName
+    where doc = parseDocument input

@@ -80,9 +80,7 @@ streamDirectoryInfo doc = show (entries dir)
 
 
 
-extractEntry file name = B.take (fromIntegral (streamSize entry)) (getBytes entry)
+extractEntry file name = B.take (fromIntegral (streamSize entry)) (getEntryBytes doc entry)
     where doc = parseDocument file
           dir = getDirectory doc
           entry = fromJust $ find (\x -> (entryName x) == name) (entries dir)
-          getBytes entry = getChainedBytes (chain entry) doc
-          chain entry = getChain doc (streamSectorID entry)

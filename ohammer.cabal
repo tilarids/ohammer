@@ -1,48 +1,24 @@
 name: ohammer
 version: 0.1
-cabal-version: -any
+cabal-version: >=1.2
 build-type: Simple
 license: GPL
 license-file: ""
-copyright:
 maintainer: Sergey Kishchenko
-build-depends: array -any, base >=4, binary -any, bytestring -any,
-               hxt -any, monad-loops -any
 stability: alpha
 homepage: http://tilarids.blogspot.com
-package-url:
-bug-reports:
-synopsis:
 description: It's a MS Office binary documents viewer (editor features would be added in future I hope)
-category:
 author: Sergey Kishchenko
-tested-with:
-data-files:
 data-dir: ""
-extra-source-files:
-extra-tmp-files:
+extra-source-files: OLEStorage.hs
+                    PPTStream.hs
+                    XMLPickle.hs
  
-executable: ohammer
-main-is: Main.hs
-buildable: True
-build-tools:
-cpp-options:
-cc-options:
-ld-options:
-pkgconfig-depends:
-frameworks:
-c-sources:
-extensions:
-extra-libraries:
-extra-lib-dirs:
-includes:
-install-includes:
-include-dirs:
-hs-source-dirs: .
-other-modules:
-ghc-prof-options:
-ghc-shared-options:
-ghc-options:
-hugs-options:
-nhc98-options:
-jhc-options:
+executable ohammer
+    build-depends: array -any, base >=4, binary -any, bytestring -any,
+                   cmdargs -any, filepath -any, hxt -any, monad-loops -any
+    main-is: Main.hs
+    buildable: True
+    hs-source-dirs: .
+    other-modules: XMLPickle OLEStorage PPTStream
+ 
