@@ -14,25 +14,6 @@ import System.Console.CmdArgs
 
 import qualified Data.ByteString.Lazy as B
 
--- dumpPPT file = sHeaderInfo ++ sDirectoryInfo
---     where sHeaderInfo = streamHeaderInfo pptStream
---           sDirectoryInfo = streamDirectoryInfo pptStream
---           pptStream = parsePPTStream file
-
---main = do
---    input  <- B.readFile "test.ppt"
-    -- writeFile "dump.out" (dumpPPT input)
-    --let rawStream = extractEntry input "PowerPoint Document"
-    -- print (parsePPTStream rawStream)
-    --let parsed = parsePPTStream rawStream
-    --runX ( constA parsed
-    --       >>>
-    --       xpickleDocument xpPPTNode
-    --         [ withIndent yes
-    --         ] "dump.xml"
-    --     )
-    --B.writeFile "PowerPoint Document.dump" rawStream
-
 data OHammer =   OLEDump {    filename :: String,
                               dumpdir :: String
                          }
@@ -54,6 +35,7 @@ processMode (PPTDump fname outf)
     input <- B.readFile fname
     let rawStream = extractEntry input "PowerPoint Document"
     let parsed = parsePPTStream rawStream
+    --putStrLn $ show parsed
     runX ( constA parsed
            >>>
            xpickleDocument xpPPTNode

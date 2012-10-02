@@ -7,7 +7,6 @@ import Data.Binary
 import Data.Binary.Get as BinaryGet
 import Data.Bits
 import qualified Data.ByteString.Lazy as B
-import Control.Monad.Loops
 
 -- data types -------------------------------------------------------------------------
 data PPTRecordHeader = PPTRecordHeader { recVer         :: Int, -- first 4 bits
@@ -36,6 +35,15 @@ instance Binary PPTRecordHeader where
                                     recType=recType,
                                     recLen=recLen
                                   }
+
+unfoldrM :: (Monad m) => (a -> m (Maybe (b,a))) -> a -> m [b]
+unfoldrM f z = do
+        x <- f z
+        case x of
+                Nothing         -> return []
+                Just (x, z)     -> do
+                        xs <- unfoldrM f z
+                        return (return x ++ xs)
 
 readPPTChildren header = unfoldrM f 0
     where f acc
