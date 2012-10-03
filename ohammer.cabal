@@ -13,6 +13,7 @@ data-dir: ""
 extra-source-files: OLEStorage.hs
                     PPTStream.hs
                     XMLPickle.hs
+		    DataSpaces.hs
  
 executable ohammer
     build-depends: array -any, base >=4, binary -any, bytestring -any,

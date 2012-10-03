@@ -1,7 +1,5 @@
 module PPTStream where
 
-import Data.List
-import Data.Maybe
 import OLEStorage
 import Data.Binary
 import Data.Binary.Get as BinaryGet
@@ -88,7 +86,3 @@ streamDirectoryInfo doc = show (entries dir)
 
 
 
-extractEntry file name = B.take (fromIntegral (streamSize entry)) (getEntryBytes doc entry)
-    where doc = parseDocument file
-          dir = getDirectory doc
-          entry = fromJust $ find (\x -> (entryName x) == name) (entries dir)

@@ -3,10 +3,11 @@ module OLEStorage where
 import GHC.Base
 import qualified Data.ByteString.Lazy as B
 import Data.Binary
+import Data.Maybe
+import Data.List
 import Data.Array.IArray
 import Data.Binary.Get as BinaryGet
 import Data.Binary.Put as BinaryPut
-import Control.Monad.Loops
 import System.FilePath.Posix
 
 import Debug.Trace
@@ -219,7 +220,7 @@ getSSATChainedBytes :: [SectorID] -> OLEDocument -> B.ByteString
 getSSATChainedBytes chain doc = B.concat byteStrings
     where byteStrings = map getStr chain
           getStr :: SectorID -> B.ByteString
-          getStr theID = B.take secSize' $ getShortStreamContainerBytes doc
+          getStr theID = B.take secSize' $ B.drop (secSize' * (fromIntegral theID)) (getShortStreamContainerBytes doc)
           secSize' = 2 ^ (secSizeShort (header doc))
 
 getShortStreamContainerBytes :: OLEDocument -> B.ByteString
@@ -303,3 +304,10 @@ dumpDocument doc dirName = mapM_ dumpEntry $ entries dir
 dumpOLEStorage :: B.ByteString -> String -> IO ()
 dumpOLEStorage input dirName = dumpDocument doc dirName
     where doc = parseDocument input
+
+extractEntry doc name = B.take (fromIntegral (streamSize entry)) (getEntryBytes doc entry)
+    where dir = getDirectory doc
+          entry = fromJust $ find (\x -> (entryName x) == name) (entries dir)
+
+extractFileEntry file name = extractEntry doc name
+    where doc = parseDocument file
