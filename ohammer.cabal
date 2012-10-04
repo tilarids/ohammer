@@ -17,7 +17,7 @@ extra-source-files: OLEStorage.hs
  
 executable ohammer
     build-depends: array -any, base >=4, binary -any, bytestring -any,
-                   cmdargs -any, filepath -any, hxt -any
+                   cmdargs -any, filepath -any, hxt -any, utf8-string
     main-is: Main.hs
     buildable: True
     hs-source-dirs: .
