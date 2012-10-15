@@ -22,4 +22,3 @@ executable ohammer
     buildable: True
     hs-source-dirs: .
     other-modules: XMLPickle OLEStorage PPTStream
- 

@@ -1,6 +1,8 @@
 module OLEStorage where
 
 import GHC.Base
+import Data.List
+import Data.Maybe
 import qualified Data.ByteString.Lazy as B
 import Data.Binary
 import Data.Maybe

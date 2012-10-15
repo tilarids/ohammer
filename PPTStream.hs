@@ -83,6 +83,3 @@ streamDirectoryInfo :: OLEDocument -> String
 streamDirectoryInfo doc = show (entries dir)
     where dir = getDirectory doc
 
-
-
-

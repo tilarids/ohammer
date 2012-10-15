@@ -3,6 +3,8 @@
 module Main where
 
 import PPTStream
+import OLEStorage
+import DOCStream
 import XMLPickle
 import OLEStorage
 import DataSpaces
