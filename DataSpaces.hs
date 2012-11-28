@@ -60,11 +60,29 @@ data IRMDSTransformInfo = IRMDSTransformInfo { irmdsXrMLLicense          :: Stri
                                                }
   deriving (Show)
 
+data EncryptionVerifier = EncryptionVerifier {
+                                                verifierSalt              :: B.ByteString,
+                                                verifierString            :: B.ByteString,
+                                                verifierHash              :: B.ByteString
+                                             }
+  deriving (Show)
+
+data EncryptionInfoStream = EncryptionInfoStream { encryptionVersion  :: Version,
+                                                   encryptionHeader   :: EncryptionHeader,
+                                                   encryptionVerifier :: EncryptionVerifier
+                                                 } 
+                          | EncryptionInfoStreamXML { encryptionXMLVersion  :: Version,
+                                                      encryptionXMLFlags    :: EncryptionHeaderFlags,
+                                                      encryptionXML         :: B.ByteString
+                                                 }
+  deriving (Show)
+      
 data EncryptionHeader = EncryptionHeader { encryptionFlags          :: EncryptionHeaderFlags,
                                            encryptionAlgID          :: EncryptionAlgorithm,
                                            encryptionAlgIDHash      :: EncryptionHash,
                                            encryptionKeySize        :: Int,
                                            encryptionProvider       :: EncryptionProvider
+
                                          }
   deriving (Show)
 
@@ -73,7 +91,7 @@ data EncryptionHeaderFlags = EncryptionHeaderFlags { encFlagCryptoAPI         ::
                                                      encFlagExternal          :: Bool,
                                                      encFlagAES               :: Bool
                                                    }
-  deriving (Show)
+  deriving (Show, Eq)
 
 data EncryptionAlgorithm =  EncryptionAlgorithmCustom 
                           | EncryptionAlgorithmRC4 
@@ -195,6 +213,49 @@ instance Binary IRMDSTransformInfo where
            license <- get
            return IRMDSTransformInfo { irmdsXrMLLicense = utf8Value license }
 
+instance Binary EncryptionVerifier where
+  put = undefined
+  get = do saltSize <- BinaryGet.getWord32le
+           if 16 /= saltSize 
+            then error $ "Salt size should be equal to 16! It's " ++ (show saltSize)
+            else return ()
+           salt <- BinaryGet.getLazyByteString 16
+           verifierString <- BinaryGet.getLazyByteString 16
+           verifierHashSize <- BinaryGet.getWord32le
+           verifierHash <- BinaryGet.getLazyByteString $ fromIntegral verifierHashSize
+           return EncryptionVerifier {
+                                        verifierSalt = salt,
+                                        verifierString = verifierString,
+                                        verifierHash = verifierHash 
+                                     }
+
+parseBinaryEncryptionInfoStream version flags = 
+      do headerSize <- BinaryGet.getWord32le
+         encHeader <- get
+         if flags /= (encryptionFlags encHeader) 
+          then error $ "Flags should be equal! They are " ++ (show flags) ++ " and " ++ (show $ encryptionFlags encHeader)
+          else return ()
+         verifier <- get
+         return EncryptionInfoStream { encryptionVersion = version,
+                                       encryptionHeader = encHeader,
+                                       encryptionVerifier = verifier
+                                     }
+
+parseXMLEncryptionInfoStream version flags= 
+      do xml <- BinaryGet.getRemainingLazyByteString
+         return EncryptionInfoStreamXML {
+                                          encryptionXMLVersion = version,
+                                          encryptionXMLFlags = flags,
+                                          encryptionXML = xml
+                                        }
+instance Binary EncryptionInfoStream where
+  put = undefined
+  get = do version <- get
+           flags <- get
+           if (4 == (versionMajor version)) && (4 == (versionMinor version))
+            then parseXMLEncryptionInfoStream version flags
+            else parseBinaryEncryptionInfoStream version flags
+
 instance Binary EncryptionHeader where
   put = undefined
   get = do flags <- get
@@ -206,7 +267,12 @@ instance Binary EncryptionHeader where
            algIDHash <- get
            keySize <- BinaryGet.getWord32le
            provider <- get
-           -- warning! reserved1, reserved2 and CSP!
+           reserved1 <- BinaryGet.getWord32le
+           reserved2 <- BinaryGet.getWord32le
+           if 0 /= reserved2
+            then error $ "reserved2 should be equal to 0! It's " ++ (show reserved2)
+            else return ()
+           -- WARNING: CSP Name should be here
            return EncryptionHeader { encryptionFlags = flags,
                                      encryptionAlgID = algID,
                                      encryptionAlgIDHash = algIDHash,
@@ -283,6 +349,9 @@ parseDataSpaceDefinition = decode
 parseTransform :: B.ByteString -> TransformDefinition
 parseTransform = decode
 
+parseEncryptionInfoStream :: B.ByteString -> EncryptionInfoStream
+parseEncryptionInfoStream = decode
+
 padTo padding x 
   | x `mod` padding == 0 = 0
   | otherwise            = padding - (x `mod` padding)
@@ -294,10 +363,13 @@ dumpCryptoStorage input dirName =
        putStrLn $ show dsm
        putStrLn $ show dsds
        putStrLn $ show transform
+       putStrLn $ show encryptionInfoStream
 
     where doc = parseDocument input
           dsmStream = extractEntry doc "DataSpaceMap"
           dsm = parseDataSpaceMap dsmStream
           dsds = map (\x -> parseDataSpaceDefinition (extractEntry doc $ dsmEntryDataSpaceName x)) $ dsmEntries dsm 
           primary = extractEntry doc "\ACKPrimary" -- only one primary st is used
+          encryptionInfo = extractEntry doc "EncryptionInfo"
           transform = parseTransform primary
+          encryptionInfoStream = parseEncryptionInfoStream encryptionInfo

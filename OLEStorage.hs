@@ -198,7 +198,8 @@ utf16BytesToString from = takeWhile (/= '\NUL') $ map unsafeChr (fromUTF16 (map 
 -- construct chain starting with startSector
 getChain :: OLEDocument -> SAT -> SectorID -> [SectorID]
 getChain doc sat startSector = startSector : buildChain startSector
-   where buildChain curSec | sat ! curSec == -1 = error "Got -1 as SecID. -1 indicates a free cell"
+   where buildChain curSec | curSec > (snd $ bounds sat) = [] -- error "Got ID that's not in SAT"
+         buildChain curSec | sat ! curSec == -1 = error "Got -1 as SecID. -1 indicates a free cell"
          buildChain curSec | sat ! curSec == -2 = []
          buildChain curSec | sat ! curSec == -3 = error "Got -3 as SecID. -3 indicates a cell is used by SAT"
          buildChain curSec | sat ! curSec == -4 = error "Got -4 as SecID. -4 indicates a cell is used by MSAT"
@@ -253,7 +254,7 @@ getSSAT doc = listArray (0, (fromIntegral (length ssat)) - 1) ssat
           ssatBytes = getSATChainedBytes chain doc
           ssat :: [Word32]
           ssat = BinaryGet.runGet parseSec ssatBytes
-          parseSec = sequence (replicate idCount BinaryGet.getWord32host)
+          parseSec = sequence (replicate idCount BinaryGet.getWord32le)
           secSizeShort' :: Word32
           secSizeShort' = 2 ^ (secSizeShort (header doc)) -- it is Word32 as needed by parseID
           idCount :: Int
@@ -305,7 +306,7 @@ dumpDocument doc dirName = mapM_ dumpEntry $ entries dir
 
 dumpOLEStorage :: B.ByteString -> String -> IO ()
 dumpOLEStorage input dirName = dumpDocument doc dirName
-    where doc = parseDocument input
+     where doc = parseDocument input
 
 extractEntry doc name = B.take (fromIntegral (streamSize entry)) (getEntryBytes doc entry)
     where dir = getDirectory doc
