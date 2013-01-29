@@ -198,7 +198,7 @@ utf16BytesToString from = takeWhile (/= '\NUL') $ map unsafeChr (fromUTF16 (map 
 -- construct chain starting with startSector
 getChain :: OLEDocument -> SAT -> SectorID -> [SectorID]
 getChain doc sat startSector = startSector : buildChain startSector
-   where buildChain curSec | curSec > (snd $ bounds sat) = [] -- error "Got ID that's not in SAT"
+   where buildChain curSec | curSec > (snd $ bounds sat) = error $ "Got ID " ++ (show curSec) ++ " that's not in SAT:" ++ (show sat)
          buildChain curSec | sat ! curSec == -1 = error "Got -1 as SecID. -1 indicates a free cell"
          buildChain curSec | sat ! curSec == -2 = []
          buildChain curSec | sat ! curSec == -3 = error "Got -3 as SecID. -3 indicates a cell is used by SAT"
@@ -256,7 +256,7 @@ getSSAT doc = listArray (0, (fromIntegral (length ssat)) - 1) ssat
           ssat = BinaryGet.runGet parseSec ssatBytes
           parseSec = sequence (replicate idCount BinaryGet.getWord32le)
           secSizeShort' :: Word32
-          secSizeShort' = 2 ^ (secSizeShort (header doc)) -- it is Word32 as needed by parseID
+          secSizeShort' = 2 ^ ((secSizeShort (header doc)) + 1) -- it is Word32 as needed by parseID
           idCount :: Int
           idCount = (fromIntegral secSizeShort') `div` 4 -- it is Int as needed by parseSec
                                                          -- that's why fromIntegral is used
@@ -299,7 +299,7 @@ dumpDocument doc dirName = mapM_ dumpEntry $ entries dir
           dumpEntry entry | (entryType entry == EmptyEntry) = return ()
           dumpEntry entry = do
               let fname = (dumpName entry)
-              putStr $ "Dumping " ++ fname ++ "..."
+              putStr $ "Dumping " ++ fname ++ " (" ++ (show $ streamSize entry) ++ " bytes)..."
               B.writeFile fname (getEntryBytes doc entry)
               putStrLn "Done!"
           dumpName entry = combine dirName (entryName entry)
