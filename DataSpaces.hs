@@ -235,6 +235,9 @@ parseBinaryEncryptionInfoStream version flags =
          if flags /= (encryptionFlags encHeader) 
           then error $ "Flags should be equal! They are " ++ (show flags) ++ " and " ++ (show $ encryptionFlags encHeader)
           else return ()
+         if 32 < headerSize
+          then BinaryGet.skip $ fromIntegral (headerSize - 32)
+          else return ()
          verifier <- get
          return EncryptionInfoStream { encryptionVersion = version,
                                        encryptionHeader = encHeader,
